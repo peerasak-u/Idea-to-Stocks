@@ -442,4 +442,4 @@ const main = async (keyword) => {
   rl.close();
 };
 
-rl.question(chalk.yellow("Please enter the keyword: "), main);
+rl.question(chalk.yellow("Tell me an idea for exploring new stocks: "), main);
