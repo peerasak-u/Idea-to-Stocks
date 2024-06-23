@@ -25,6 +25,8 @@ const askMoreChoices = [
   },
 ];
 
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
@@ -95,14 +97,39 @@ const getCompletion = async (systemPrompt, userPrompt) => {
   ]);
 };
 
-const verifyInputMessage = async (message) => {
+const verifyInputMessage = async (message, maxRetries = 3) => {
   const system = await fs.promises.readFile("./prompts/input-guard.md", "utf8");
   const user = `Keyword is "${message}"`;
-  const completion = await getCompletion(system, user);
-  const detectedJsons = extractJsonFromString(completion);
-  const latestIndex = Math.max(0, detectedJsons.length - 1);
-  const result = detectedJsons[latestIndex];
-  return result;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      if (attempt > 1) {
+        console.log(`Waiting for 2 seconds before attempt ${attempt}...`);
+        await delay(2000); // Wait for 2 seconds
+      }
+
+      const completion = await getCompletion(system, user);
+      const detectedJsons = extractJsonFromString(completion);
+
+      if (detectedJsons.length > 0) {
+        const latestIndex = detectedJsons.length - 1;
+        return detectedJsons[latestIndex];
+      }
+
+      if (attempt === maxRetries) {
+        throw new Error(
+          "No JSON found in the completion after maximum retries"
+        );
+      }
+
+      console.log(`Attempt ${attempt}: No JSON found. Retrying...`);
+    } catch (error) {
+      if (attempt === maxRetries) {
+        throw error;
+      }
+      console.error(`Attempt ${attempt} failed:`, error.message);
+    }
+  }
 };
 
 const suggestNewKeywords = async (keyword, reason) => {
@@ -133,9 +160,10 @@ const ensureKeyword = async (keyword) => {
 
 const searchStockBySymbol = async (symbol) => {
   const { quotes } = await yahooFinance.search(symbol);
-  const filtered = quotes.filter(
-    (quote) => quote.exchDisp === "NASDAQ" && quote.symbol == symbol
-  );
+  const filtered = quotes.filter((quote) => {
+    const expectedExchDisps = ["NASDAQ", "NYSE", "AMEX"];
+    return expectedExchDisps.includes(quote.exchDisp) && quote.symbol == symbol;
+  });
 
   if (filtered.length > 0) {
     return filtered[0];
@@ -146,7 +174,8 @@ const searchStockBySymbol = async (symbol) => {
 
 const verifyAllStocks = async (stocks) => {
   const { exactMatch, otherMatchingStocks } = stocks;
-  const exactChecked = searchStockBySymbol(exactMatch.symbol);
+  const exactChecked = await searchStockBySymbol(exactMatch.symbol);
+
   const otherChecked = await Promise.all(
     otherMatchingStocks.map((stock) => searchStockBySymbol(stock.symbol))
   );
@@ -188,7 +217,7 @@ const responseWithSuggession = async (keyword, reason) => {
   keywords.forEach((k, index) => console.log(chalk.cyan(`${index + 1}. ${k}`)));
 
   const selectedIndex = await askQuestion(
-    chalk.yellow("Please choose a new keyword by entering the number: ")
+    chalk.yellow("\nPlease choose a new keyword by entering the number: ")
   );
 
   const newKeywordIndex = parseInt(selectedIndex, 10) - 1;
@@ -202,13 +231,16 @@ const responseWithSuggession = async (keyword, reason) => {
 };
 
 const responseWithContextChoices = async (keyword, contexts) => {
-  console.log(chalk.yellow(`${keyword} is unclear. Do you mean any of these?`));
+  console.log(
+    chalk.bold.blue(`\n"${keyword}"`) +
+      chalk.yellow(" is unclear. Do you mean any of these?")
+  );
   contexts.forEach((context, index) =>
     console.log(chalk.cyan(`${index + 1}. ${context}`))
   );
 
   const selectedIndex = await askQuestion(
-    chalk.yellow("Please choose a context by entering the number: ")
+    chalk.yellow("\nPlease choose a context by entering the number: ")
   );
 
   const selectedContextIndex = parseInt(selectedIndex, 10) - 1;
@@ -238,7 +270,7 @@ const askForMoreContext = async () => {
     console.log(chalk.cyan(`${index + 1}. ${choice}`))
   );
   const selectedIndex = await askQuestion(
-    chalk.yellow("Please choose a topic by entering the number: ")
+    chalk.yellow("\nPlease choose a topic by entering the number: ")
   );
 
   const selectedTopicIndex = parseInt(selectedIndex, 10) - 1;
@@ -258,7 +290,7 @@ const askForMoreContext = async () => {
   }
 };
 
-const suggestStocks = async (keyword, context) => {
+const suggestStocks = async (keyword, context, maxRetries = 3) => {
   const system = await fs.promises.readFile(
     "./prompts/suggest-stocks.md",
     "utf8"
@@ -269,15 +301,40 @@ const suggestStocks = async (keyword, context) => {
     : ". and nothing more context";
 
   const user = `Keyword is "${keyword}"${contextSentence}`;
-  const completion = await getCompletion(system, user);
-  await recordConversation(system, user, completion, false);
-  const detectedJsons = extractJsonFromString(completion);
-  const latestIndex = Math.max(0, detectedJsons.length - 1);
-  const result = detectedJsons[latestIndex];
-  return result;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      if (attempt > 1) {
+        console.log(`Waiting for 2 seconds before attempt ${attempt}...`);
+        await delay(2000); // Wait for 2 seconds
+      }
+
+      const completion = await getCompletion(system, user);
+      await recordConversation(system, user, completion, false);
+      const detectedJsons = extractJsonFromString(completion);
+
+      if (detectedJsons.length > 0) {
+        const latestIndex = detectedJsons.length - 1;
+        return detectedJsons[latestIndex];
+      }
+
+      if (attempt === maxRetries) {
+        throw new Error(
+          "No JSON found in the completion after maximum retries"
+        );
+      }
+
+      console.log(`Attempt ${attempt}: No JSON found. Retrying...`);
+    } catch (error) {
+      if (attempt === maxRetries) {
+        throw error;
+      }
+      console.error(`Attempt ${attempt} failed:`, error.message);
+    }
+  }
 };
 
-const suggestMoreWithContext = async (context) => {
+const suggestMoreWithContext = async (context, maxRetries = 3) => {
   const conversationString = await fs.promises.readFile(
     "./conversations.json",
     "utf8"
@@ -286,20 +343,39 @@ const suggestMoreWithContext = async (context) => {
 
   const user = {
     role: "user",
-    content: `List mores stocks that are related to the context "${context}"`,
+    content: `List more stocks that are related to the context "${context}"`,
   };
   conversation.push(user);
 
-  try {
-    const completion = await callOpenAI(conversation);
-    await recordConversation(null, user.content, completion, true);
-    const detectedJsons = extractJsonFromString(completion);
-    const latestIndex = Math.max(0, detectedJsons.length - 1);
-    const result = detectedJsons[latestIndex];
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      if (attempt > 1) {
+        console.log(`Waiting for 2 seconds before attempt ${attempt}...`);
+        await delay(2000); // Wait for 2 seconds
+      }
 
-    return result;
-  } catch (error) {
-    console.error(error);
+      const completion = await callOpenAI(conversation);
+      await recordConversation(null, user.content, completion, true);
+      const detectedJsons = extractJsonFromString(completion);
+
+      if (detectedJsons.length > 0) {
+        const latestIndex = detectedJsons.length - 1;
+        return detectedJsons[latestIndex];
+      }
+
+      if (attempt === maxRetries) {
+        throw new Error(
+          "No JSON found in the completion after maximum retries"
+        );
+      }
+
+      console.log(`Attempt ${attempt}: No JSON found. Retrying...`);
+    } catch (error) {
+      if (attempt === maxRetries) {
+        throw error;
+      }
+      console.error(`Attempt ${attempt} failed:`, error.message);
+    }
   }
 };
 
