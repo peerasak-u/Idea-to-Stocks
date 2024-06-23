@@ -13,7 +13,6 @@ To get started with Idea to Stocks, follow these easy steps:
 1. Install the required dependencies by running `pnpm install` in your terminal.
 
 ## Usage 🔧
------
 
 Once installed, you can use Idea to Stocks by providing a keyword as input. The tool will then use the LLM to suggest relevant stocks in the US market by:
 
