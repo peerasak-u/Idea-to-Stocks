@@ -1,0 +1,20 @@
+{
+  "name": "stock-ideas",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "search": "NODE_NO_WARNINGS=1 node index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "dotenv": "^16.4.5",
+    "extract-json-from-string-y": "^1.0.3",
+    "openai": "^4.52.0",
+    "yahoo-finance2": "^2.11.3"
+  }
+}
