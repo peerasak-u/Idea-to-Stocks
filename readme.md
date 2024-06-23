@@ -1,6 +1,3 @@
-Here's the updated `README.md`:
-
-```md
 # Idea to Stocks
 
 A Command-Line Tool for Suggesting US Stocks based on Keywords using Large Language Models (LLMs)
@@ -26,6 +23,3 @@ To get started with Idea to Stocks, follow these easy steps:
 Once installed, you can use Idea to Stocks by providing a keyword as input. The tool will then use the LLM to suggest relevant stocks in the US market by:
 
 Run the `search` script by typing `pnpm run search` in your terminal.
-```
-
-Let me know if this is what you were looking for!
