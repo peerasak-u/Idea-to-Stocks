@@ -28,7 +28,6 @@
      }
      ```
 
-```markdown
 ### Example:
 
 **Input from System**:
@@ -79,7 +78,8 @@
   "isReady": true
 }
 ```
-```
+
+---
 
 **Clear Guidance**:
 - If the keyword is clear (including product/brand/event of any company), confirm its readiness.
